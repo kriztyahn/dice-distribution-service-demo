@@ -1,13 +1,17 @@
 package com.avaloq.dicedemo.service;
 
+import com.avaloq.dicedemo.dto.RollDistributionResponse;
+import com.avaloq.dicedemo.dto.SimulationSummaryResponse;
 import com.avaloq.dicedemo.model.*;
 import com.avaloq.dicedemo.repository.RollRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 
+@Slf4j
 @Service
 public class SimulationService {
 
@@ -17,64 +21,71 @@ public class SimulationService {
         this.rollRepository = rollRepository;
     }
 
-    public List<RollDistribution> getDistribution(int diceCount, int sideCount) {
+    public List<RollDistributionResponse> getDistribution(int diceCount, int sideCount) {
         List<Roll> rollList = rollRepository.findAllByDiceCountAndSideCount(diceCount, sideCount);
 
-        List<RollDistribution> rollDistributionList = new ArrayList<>();
+        List<RollDistributionResponse> rollDistributionResponseList = new ArrayList<>();
         if(null != rollList) {
             rollList.forEach(roll -> {
-                RollDistribution rollDistribution = RollDistribution.builder()
+                RollDistributionResponse rollDistributionResponse = RollDistributionResponse.builder()
                         .diceCount(roll.getDiceCount())
                         .sideCount(roll.getSideCount())
                         .rollSum(roll.getRollSum())
+                        .rollSumCount(roll.getRollSumCount())
+                        .totalRollCount(roll.getTotalRollCount())
                         .distribution(BigDecimal.ZERO)
                         .build();
 
-                if(rollDistributionList.contains(rollDistribution)) {
-                    rollDistribution = rollDistributionList.get(rollDistributionList.indexOf(rollDistribution));
-                    rollDistribution.setTotalRollCount(rollDistribution.getTotalRollCount() + roll.getTotalRollCount());
-                    rollDistribution.setRollSumCount(rollDistribution.getRollSumCount() + roll.getRollSumCount());
+                if(rollDistributionResponseList.contains(rollDistributionResponse)) {
+                    rollDistributionResponse = rollDistributionResponseList.get(rollDistributionResponseList.indexOf(rollDistributionResponse));
+                    rollDistributionResponse.setTotalRollCount(rollDistributionResponse.getTotalRollCount() + roll.getTotalRollCount());
+                    rollDistributionResponse.setRollSumCount(rollDistributionResponse.getRollSumCount() + roll.getRollSumCount());
                 } else {
-                    rollDistributionList.add(rollDistribution);
+                    rollDistributionResponseList.add(rollDistributionResponse);
                 }
             });
         }
 
-        rollDistributionList.forEach(roll -> {
-            BigDecimal distribution = BigDecimal.valueOf(roll.getRollSumCount())
-                    .divide(BigDecimal.valueOf(roll.getTotalRollCount()), 2, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100));
-
-            roll.setDistribution(distribution);
+        rollDistributionResponseList.forEach(roll -> {
+            BigDecimal distribution = BigDecimal.ZERO;
+            try {
+                distribution = BigDecimal.valueOf(roll.getRollSumCount())
+                        .divide(BigDecimal.valueOf(roll.getTotalRollCount()), 2, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
+            } catch(ArithmeticException e) {
+                log.error(e.getMessage());
+            } finally {
+                roll.setDistribution(distribution);
+            }
         });
 
-        return rollDistributionList;
+        return rollDistributionResponseList;
     }
 
-    public List<SimulationSummary> getSimulationSummary() {
+    public List<SimulationSummaryResponse> getSimulationSummary() {
         List<SummaryProjection> summaryProjectionList = rollRepository.findAllSimulation();
 
-        List<SimulationSummary> simulationSummaryList = new ArrayList<>();
+        List<SimulationSummaryResponse> simulationSummaryResponseList = new ArrayList<>();
         if(null != summaryProjectionList) {
             summaryProjectionList.forEach(simulation -> {
-                SimulationSummary summary = SimulationSummary.builder()
+                SimulationSummaryResponse summary = SimulationSummaryResponse.builder()
                         .sideCount(simulation.getSideCount())
                         .diceCount(simulation.getDiceCount())
                         .totalRollCount(simulation.getTotalRollCount())
                         .simulationCount(1)
                         .build();
 
-                if (simulationSummaryList.contains(summary)) {
-                    summary = simulationSummaryList.get(simulationSummaryList.indexOf(summary));
+                if (simulationSummaryResponseList.contains(summary)) {
+                    summary = simulationSummaryResponseList.get(simulationSummaryResponseList.indexOf(summary));
                     summary.setTotalRollCount(summary.getTotalRollCount() + simulation.getTotalRollCount());
                     summary.setSimulationCount(summary.getSimulationCount() + 1);
                 } else {
-                    simulationSummaryList.add(summary);
+                    simulationSummaryResponseList.add(summary);
                 }
             });
         }
 
-        return simulationSummaryList;
+        return simulationSummaryResponseList;
     }
 
     public Map<String, Integer> roll(Dice dice, int diceCount, int rollCount) {
@@ -94,20 +105,13 @@ public class SimulationService {
 
     private void saveSimulation(Map<String, Integer> rollSumMap, int diceCount, int sideCount, int rollCount) {
         rollSumMap.forEach((key, value) -> {
-//            Roll roll = Roll.builder()
-//                    .rollSum(key)
-//                    .rollSumCount(value)
-//                    .diceCount(diceCount)
-//                    .sideCount(sideCount)
-//                    .totalRollCount(rollCount)
-//                    .build();
             Roll roll = new Roll(diceCount, sideCount, key, value, rollCount);
 
             rollRepository.save(roll);
         });
     }
 
-    private List<Integer> getRollResults(Dice dice, int numberOfDice, int numbeOfRolls) {
+    protected List<Integer> getRollResults(Dice dice, int numberOfDice, int numbeOfRolls) {
         List<Integer> resultList = new ArrayList<>();
 
         for(int i=0; i<numbeOfRolls; i++) {
@@ -121,7 +125,7 @@ public class SimulationService {
         return resultList;
     }
 
-    private Map<String, Integer> initializeMap(int numberOfItems) {
+    protected Map<String, Integer> initializeMap(int numberOfItems) {
         Map<String, Integer> map = new TreeMap<>(new Comparator<String>() {
             @Override
             public int compare(String s1, String s2) {

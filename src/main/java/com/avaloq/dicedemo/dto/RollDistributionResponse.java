@@ -1,13 +1,15 @@
 package com.avaloq.dicedemo.dto;
 
-import com.avaloq.dicedemo.model.SummaryProjection;
+import com.avaloq.dicedemo.model.Roll;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
+
+import java.math.BigDecimal;
 
 @Builder
 @Getter
 @Setter
-public class SimulationSummaryResponse  {
+public class RollDistributionResponse {
 
     @JsonProperty("dice_count")
     private int diceCount;
@@ -15,11 +17,16 @@ public class SimulationSummaryResponse  {
     @JsonProperty("side_count")
     private int sideCount;
 
+    @JsonProperty("roll_sum")
+    private String rollSum;
+
+    @JsonProperty("roll_sum_count")
+    private int rollSumCount;
+
     @JsonProperty("total_roll_count")
     private int totalRollCount;
 
-    @JsonProperty("simulation_count")
-    private long simulationCount;
+    private BigDecimal distribution;
 
     @Override
     public boolean equals(Object o) {
@@ -29,14 +36,15 @@ public class SimulationSummaryResponse  {
 
         if(this.getClass() != o.getClass()) return false;
 
-        SimulationSummaryResponse simulationSummaryResponse = (SimulationSummaryResponse) o;
+        RollDistributionResponse roll = (RollDistributionResponse) o;
 
-        return diceCount == simulationSummaryResponse.diceCount
-                && sideCount == simulationSummaryResponse.sideCount;
+        return diceCount == roll.diceCount
+                && sideCount == roll.sideCount
+                && rollSum.equals(roll.getRollSum());
     }
 
     @Override
     public int hashCode() {
-        return diceCount * sideCount;
+        return diceCount * sideCount * Integer.parseInt(rollSum);
     }
 }

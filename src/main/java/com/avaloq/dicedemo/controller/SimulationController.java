@@ -4,12 +4,10 @@ import com.avaloq.dicedemo.exception.InvalidRequestException;
 import com.avaloq.dicedemo.model.Dice;
 import com.avaloq.dicedemo.dto.SimulationRequest;
 import com.avaloq.dicedemo.dto.SimulationResponse;
-import com.avaloq.dicedemo.model.RollDistribution;
-import com.avaloq.dicedemo.model.SimulationSummary;
-import com.avaloq.dicedemo.model.SummaryProjection;
+import com.avaloq.dicedemo.dto.RollDistributionResponse;
+import com.avaloq.dicedemo.dto.SimulationSummaryResponse;
 import com.avaloq.dicedemo.service.SimulationService;
 import com.avaloq.dicedemo.util.Constant;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@CrossOrigin
 @RestController
 @RequestMapping(Constant.BASE_URL)
 public class SimulationController {
@@ -45,18 +44,18 @@ public class SimulationController {
         return new ResponseEntity<>(new SimulationResponse(resultMap), HttpStatus.OK);
     }
 
-    @GetMapping("/simulation/summary")
-    public ResponseEntity<List<SimulationSummary>> getSimulationSummary() {
-        List<SimulationSummary> summary = simulationService.getSimulationSummary();
+    @GetMapping("/simulation/history")
+    public ResponseEntity<List<SimulationSummaryResponse>> getSimulationSummary() {
+        List<SimulationSummaryResponse> summary = simulationService.getSimulationSummary();
 
         return new ResponseEntity<>(summary, HttpStatus.OK);
     }
 
     @GetMapping("/simulation/distribution")
-    public ResponseEntity<List<RollDistribution>> getSimulationDistribution(@RequestParam("dice_count") int diceCount, @RequestParam("side_count") int sideCount) {
-        List<RollDistribution> rollDistributionList = simulationService.getDistribution(diceCount, sideCount);
+    public ResponseEntity<List<RollDistributionResponse>> getSimulationDistribution(@RequestParam("dice_count") int diceCount, @RequestParam("side_count") int sideCount) {
+        List<RollDistributionResponse> rollDistributionResponseList = simulationService.getDistribution(diceCount, sideCount);
 
-        return new ResponseEntity<>(rollDistributionList, HttpStatus.OK);
+        return new ResponseEntity<>(rollDistributionResponseList, HttpStatus.OK);
     }
 }
 
